@@ -4,12 +4,24 @@ import { requireBridge } from "./client"
 import { toPRRecord } from "./mappers"
 import type { PRFullDetailsWire, PRRecordWire } from "./wire"
 
+export type ApproveAndMergeStep = "approve" | "merge"
+
+export interface ApproveAndMergeResult {
+  failedStep?: ApproveAndMergeStep | ""
+  approved: boolean
+  errorMessage?: string
+}
+
 export interface PRsBridge {
   ListPendingPRs(): Promise<PRRecordWire[]>
   ListHistoryPRs(): Promise<PRRecordWire[]>
   GetPRDetails(prID: string): Promise<PRFullDetailsWire>
   GetPRDiff(prID: string): Promise<string>
   MergePR(prID: string, method: MergeMethod): Promise<void>
+  ApproveAndMergePR(
+    prID: string,
+    method: MergeMethod
+  ): Promise<ApproveAndMergeResult>
   RefreshNow(): Promise<void>
   OpenPRInBrowser(url: string): Promise<void>
   AcknowledgeTray(): Promise<void>
@@ -32,6 +44,12 @@ export const getPRDiff = (prID: string): Promise<string> =>
 
 export const mergePR = (prID: string, method: MergeMethod): Promise<void> =>
   requireBridge("MergePR")(prID, method)
+
+export const approveAndMergePR = (
+  prID: string,
+  method: MergeMethod
+): Promise<ApproveAndMergeResult> =>
+  requireBridge("ApproveAndMergePR")(prID, method)
 
 export const refreshNow = (): Promise<void> => requireBridge("RefreshNow")()
 

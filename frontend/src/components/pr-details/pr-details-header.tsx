@@ -18,6 +18,7 @@ interface PRDetailsHeaderProps {
   mergeBlockReason: string | null
   merging: boolean
   onRequestMerge: (method: "squash" | "merge") => void
+  onRequestApproveAndMerge: (method: "squash" | "merge") => void
 }
 
 export function PRDetailsHeader({
@@ -29,6 +30,7 @@ export function PRDetailsHeader({
   mergeBlockReason,
   merging,
   onRequestMerge,
+  onRequestApproveAndMerge,
 }: PRDetailsHeaderProps) {
   return (
     <div className="flex flex-col gap-2">
@@ -46,6 +48,15 @@ export function PRDetailsHeader({
             <ExternalLink data-icon="inline-start" />
             Abrir no GitHub
           </Button>
+          <MergeButton
+            label="Approve & Squash"
+            method="squash"
+            primary={false}
+            canMerge={canMerge}
+            reason={mergeBlockReason}
+            merging={merging}
+            onClick={onRequestApproveAndMerge}
+          />
           <MergeButton
             label="Squash"
             method="squash"

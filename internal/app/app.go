@@ -314,6 +314,14 @@ func (a *App) SetTheme(theme string) error {
 // without a gh client wired. Clean error for smoke/test builds.
 var errGitHubUnavailable = errors.New("github client not available")
 
+// mergeMethodSquash / mergeMethodMerge são os identificadores enviados pelo
+// frontend nos métodos MergePR / ApproveAndMergePR. Centralizados como
+// constantes pra evitar repetição e drift.
+const (
+	mergeMethodSquash = "squash"
+	mergeMethodMerge  = "merge"
+)
+
 // errPRNotFound signals that the frontend referenced an id the store no
 // longer tracks — e.g. history was cleared between list and click.
 var errPRNotFound = errors.New("pr not tracked")
@@ -351,6 +359,18 @@ func (a *App) GetPRDiff(prID string) (string, error) {
 	return a.gh.GetPRDiff(ctx, rec.URL)
 }
 
+// ApproveAndMergeResult informa qual passo do fluxo composto Approve+Merge
+// concluiu. FailedStep vazio + ErrorMessage vazio == sucesso. Quando algum
+// passo falha, o método retorna o struct populado e nil error — o frontend
+// distingue passo do erro pra mostrar mensagem específica (REV-62). Erros de
+// validação prévia (gh indisponível, PR não encontrado, método inválido)
+// continuam vindo como error pra rejeitar a Promise no JS.
+type ApproveAndMergeResult struct {
+	FailedStep   string `json:"failedStep,omitempty"`
+	Approved     bool   `json:"approved"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+}
+
 // MergePR runs `gh pr merge` with the chosen method. On success it nudges
 // the poller so the next tick re-enriches the PR — the store then detects
 // MergedAt != nil and flips state to MERGED, which moves the PR into the
@@ -366,9 +386,9 @@ func (a *App) MergePR(prID string, method string) error {
 	}
 	var m github.MergeMethod
 	switch method {
-	case "squash":
+	case mergeMethodSquash:
 		m = github.MergeMethodSquash
-	case "merge":
+	case mergeMethodMerge:
 		m = github.MergeMethodMerge
 	default:
 		return fmt.Errorf("unsupported merge method: %q", method)
@@ -385,6 +405,53 @@ func (a *App) MergePR(prID string, method string) error {
 		fn()
 	}
 	return nil
+}
+
+// ApproveAndMergePR roda `gh pr review --approve` e em sequência o merge
+// com o método escolhido. Existe pra contornar branch rulesets que exigem
+// review aprovado antes de merge (REV-62). Erros de gh em qualquer passo
+// vêm embutidos no struct — Promise resolve sempre que o pipeline foi
+// invocado. Erros de validação prévia caem em error normal.
+func (a *App) ApproveAndMergePR(prID string, method string) (ApproveAndMergeResult, error) {
+	res := ApproveAndMergeResult{}
+	if a.gh == nil {
+		return res, errGitHubUnavailable
+	}
+	ctx := a.callCtx()
+	rec, ok := a.store.GetByID(ctx, prID)
+	if !ok {
+		return res, errPRNotFound
+	}
+	var m github.MergeMethod
+	switch method {
+	case mergeMethodSquash:
+		m = github.MergeMethodSquash
+	case mergeMethodMerge:
+		m = github.MergeMethodMerge
+	default:
+		return res, fmt.Errorf("unsupported merge method: %q", method)
+	}
+
+	if err := a.gh.ApprovePR(ctx, rec.URL); err != nil {
+		res.FailedStep = "approve"
+		res.ErrorMessage = err.Error()
+		return res, nil //nolint:nilerr // erro vem embutido no struct (REV-62 — Wails descarta o struct quando error != nil)
+	}
+	res.Approved = true
+
+	if err := a.gh.MergePR(ctx, rec.URL, m); err != nil {
+		res.FailedStep = "merge"
+		res.ErrorMessage = err.Error()
+		return res, nil //nolint:nilerr // erro vem embutido no struct (REV-62 — Wails descarta o struct quando error != nil)
+	}
+
+	a.mu.RLock()
+	fn := a.onRefresh
+	a.mu.RUnlock()
+	if fn != nil {
+		fn()
+	}
+	return res, nil
 }
 
 // OnPollEvent is the EventHandler wired into the poller. It forwards each
