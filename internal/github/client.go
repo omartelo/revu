@@ -20,6 +20,7 @@ type Client interface {
 	GetPRFullDetails(ctx context.Context, url string) (*PRFullDetails, error)
 	GetPRDiff(ctx context.Context, url string) (string, error)
 	MergePR(ctx context.Context, url string, method MergeMethod) error
+	ApprovePR(ctx context.Context, url string) error
 }
 
 // detailsCacheTTL is how long GetPRFullDetails / GetPRDiff results stay cached
@@ -282,6 +283,19 @@ func (c *ghClient) MergePR(ctx context.Context, url string, method MergeMethod) 
 	return nil
 }
 
+// ApprovePR invoca `gh pr review <url> --approve` e invalida o cache do PR pra
+// próxima leitura refletir o novo review state. Existe pra suportar fluxos de
+// branch ruleset que exigem review aprovado antes do merge (REV-62). Self-
+// approve cai em ErrApproveSelf via classify().
+func (c *ghClient) ApprovePR(ctx context.Context, url string) error {
+	_, stderr, err := c.runGH(ctx, "pr", "review", url, "--approve")
+	if err != nil {
+		return classify(stderr, err)
+	}
+	c.cache.invalidate(url)
+	return nil
+}
+
 func flattenLabels(in []rawLabel) []Label {
 	out := make([]Label, 0, len(in))
 	for _, l := range in {
@@ -424,6 +438,10 @@ func classify(stderr []byte, runErr error) error {
 	case strings.Contains(lower, "pull request is in draft"),
 		strings.Contains(lower, "pull request is closed"):
 		return ErrNotMergeable
+	case strings.Contains(lower, "can not approve your own pull request"),
+		strings.Contains(lower, "cannot approve your own pull request"),
+		strings.Contains(lower, "can not approve your own"):
+		return ErrApproveSelf
 	}
 	if runErr == nil {
 		runErr = errors.New("gh failed")

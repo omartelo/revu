@@ -28,6 +28,9 @@ func (f *fakeClient) GetPRDiff(_ context.Context, _ string) (string, error) { re
 func (f *fakeClient) MergePR(_ context.Context, _ string, _ github.MergeMethod) error {
 	return nil
 }
+func (f *fakeClient) ApprovePR(_ context.Context, _ string) error {
+	return nil
+}
 
 func TestCheckGHInPath(t *testing.T) {
 	ok := checkGHInPath(func(_ string) (string, error) { return "/usr/bin/gh", nil })

@@ -39,6 +39,12 @@ type fakeExec struct {
 	mergeStderr []byte
 	mergeErr    error
 
+	// reviewStderr/reviewErr, when set, override stderr/err for
+	// `gh pr review` invocations — same pattern as mergeStderr/mergeErr,
+	// scoped ao fluxo de approve (REV-62).
+	reviewStderr []byte
+	reviewErr    error
+
 	calls []fakeCall
 
 	// Back-compat mirrors of the LAST call — existing tests that issue a
@@ -74,6 +80,9 @@ func (f *fakeExec) responseFor(args []string) ([]byte, []byte, error) {
 	}
 	if len(args) >= 2 && args[0] == "pr" && args[1] == "merge" {
 		return nil, f.mergeStderr, f.mergeErr
+	}
+	if len(args) >= 2 && args[0] == "pr" && args[1] == "review" {
+		return nil, f.reviewStderr, f.reviewErr
 	}
 	return f.stdout, f.stderr, f.err
 }
@@ -574,6 +583,77 @@ func TestMergePR_InvalidatesCache(t *testing.T) {
 	// Post-merge fetch must hit gh again since the cache was invalidated.
 	if _, err := c.GetPRFullDetails(context.Background(), url); err != nil {
 		t.Fatalf("post-merge fetch: %v", err)
+	}
+	views := 0
+	for _, call := range fe.calls {
+		if len(call.args) >= 2 && call.args[0] == "pr" && call.args[1] == "view" {
+			views++
+		}
+	}
+	if views != 2 {
+		t.Fatalf("cache invalidation failed: want 2 pr view calls, got %d", views)
+	}
+}
+
+func TestApprovePR_Success(t *testing.T) {
+	fe := &fakeExec{}
+	c := NewClient(fe)
+	url := "https://github.com/octocat/hello-world/pull/142"
+	if err := c.ApprovePR(context.Background(), url); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	wantArgs := []string{"pr", "review", url, "--approve"}
+	if !reflect.DeepEqual(fe.gotArgs, wantArgs) {
+		t.Fatalf("args mismatch:\nwant %v\ngot  %v", wantArgs, fe.gotArgs)
+	}
+}
+
+func TestApprovePR_ErrorClassification(t *testing.T) {
+	tests := []struct {
+		name    string
+		stderr  []byte
+		wantErr error
+	}{
+		{
+			"self approve",
+			[]byte("GraphQL: Can not approve your own pull request (addPullRequestReview)"),
+			ErrApproveSelf,
+		},
+		{
+			"auth expired",
+			[]byte("authentication required"),
+			ErrAuthExpired,
+		},
+		{
+			"permission denied",
+			[]byte("Resource not accessible by personal access token"),
+			ErrMergePermission,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fe := &fakeExec{reviewStderr: tt.stderr, reviewErr: errors.New("exit 1")}
+			c := NewClient(fe)
+			err := c.ApprovePR(context.Background(), "x")
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("want errors.Is(%v), got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestApprovePR_InvalidatesCache(t *testing.T) {
+	fe := &fakeExec{stdout: loadFixture(t, "pr_full_view.json")}
+	c := NewClient(fe)
+	url := "https://github.com/octocat/hello-world/pull/142"
+	if _, err := c.GetPRFullDetails(context.Background(), url); err != nil {
+		t.Fatalf("warmup: %v", err)
+	}
+	if err := c.ApprovePR(context.Background(), url); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	if _, err := c.GetPRFullDetails(context.Background(), url); err != nil {
+		t.Fatalf("post-approve fetch: %v", err)
 	}
 	views := 0
 	for _, call := range fe.calls {
