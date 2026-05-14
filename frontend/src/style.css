@@ -72,6 +72,14 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Motion tokens (REV-59) — fast: press; base: hover/tabs/route; slow: dialogs.
+     Tailwind v4 expõe como utilitários duration-fast/base/slow e ease-*. */
+  --duration-fast: 100ms;
+  --duration-base: 150ms;
+  --duration-slow: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 :root {
@@ -209,5 +217,20 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* REV-59 — kill-switch global de animações para usuários com prefers-reduced-motion.
+   Cobre Tailwind utilities, tw-animate-css, Sonner e Radix data-state animations
+   sem precisar variant motion-reduce: por componente. Mantém transitions ativas
+   (não zera) — comprime para imperceptível, evitando glitches em transitionend. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

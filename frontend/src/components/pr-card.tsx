@@ -38,7 +38,7 @@ export function PRCard({ pr, onOpen, isNew = false }: PRCardProps) {
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKey}
-      className="cursor-pointer outline-none ring-1 ring-foreground/10 transition-[box-shadow,border-color,transform] duration-150 hover:ring-primary/40 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring"
+      className="cursor-pointer shadow-sm outline-none ring-0 transition-[box-shadow,transform] duration-base ease-standard hover:shadow-md hover:ring-1 hover:ring-primary/30 hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0 active:shadow-sm"
     >
       <div className="flex items-start gap-3 px-3">
         <div className="relative shrink-0">
