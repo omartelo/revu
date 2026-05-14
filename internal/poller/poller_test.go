@@ -108,6 +108,10 @@ func (f *fakeClient) MergePR(_ context.Context, _ string, _ github.MergeMethod) 
 	return nil
 }
 
+func (f *fakeClient) ApprovePR(_ context.Context, _ string) error {
+	return nil
+}
+
 type fakeNotifier struct {
 	mu   sync.Mutex
 	sent []store.PRRecord

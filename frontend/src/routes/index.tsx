@@ -71,7 +71,7 @@ function MainView() {
   )
 
   return (
-    <div className="flex h-screen flex-col gap-3 bg-background p-3 text-foreground">
+    <div className="flex h-screen animate-in flex-col gap-3 bg-background p-3 text-foreground duration-base ease-standard fade-in-0">
       <MainHeader
         pendingCount={pending.length}
         historyCount={history.length}

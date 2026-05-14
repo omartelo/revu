@@ -199,6 +199,7 @@ var (
 	ErrNotMergeable    = errors.New("pr not mergeable")
 	ErrMergePermission = errors.New("no write permission to merge")
 	ErrMergeConflict   = errors.New("merge conflict")
+	ErrApproveSelf     = errors.New("cannot approve own pull request")
 )
 
 // rawSearchPR mirrors the nested JSON from `gh search prs` so we can decode

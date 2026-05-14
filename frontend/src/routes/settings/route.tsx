@@ -87,7 +87,7 @@ function SettingsLayout() {
 
   return (
     <SettingsFormContext.Provider value={form}>
-      <div className="flex h-screen flex-col bg-background text-foreground">
+      <div className="flex h-screen animate-in flex-col bg-background text-foreground duration-base ease-standard fade-in-0">
         <header className="flex items-center gap-2 border-b px-3 py-2">
           <Button
             size="sm"

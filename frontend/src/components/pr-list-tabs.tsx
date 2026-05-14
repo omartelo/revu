@@ -50,7 +50,7 @@ export function PRListTabs({
         <TabsTrigger value="history">Histórico</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="pending" className="flex-1 overflow-y-auto">
+      <TabsContent value="pending" className="flex-1 overflow-y-auto px-2 pt-2">
         {initialLoading && pending.length === 0 ? (
           <SkeletonList />
         ) : pending.length === 0 ? (
@@ -77,7 +77,7 @@ export function PRListTabs({
         )}
       </TabsContent>
 
-      <TabsContent value="history" className="flex-1 overflow-y-auto">
+      <TabsContent value="history" className="flex-1 overflow-y-auto px-2 pt-2">
         {initialLoading && history.length === 0 ? (
           <SkeletonList />
         ) : history.length === 0 ? (

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { useApproveAndMergePR } from "@/hooks/mutations/use-approve-and-merge-pr"
 import { useMergePR } from "@/hooks/mutations/use-merge-pr"
 import { usePRDetails } from "@/hooks/use-pr-details"
 import { type MergeMethod, type PRState, type ReviewState } from "@/lib/types"
@@ -32,9 +33,12 @@ export function PRDetailsView({ prID, onBack }: PRDetailsViewProps) {
   const { details, diff, diffError, diffLoading, loading, error, reload } =
     usePRDetails(prID)
   const mergeMutation = useMergePR()
-  const merging = mergeMutation.isPending
+  const approveAndMergeMutation = useApproveAndMergePR()
+  const merging = mergeMutation.isPending || approveAndMergeMutation.isPending
 
   const [mergeMethod, setMergeMethod] = useState<MergeMethod | null>(null)
+  const [approveAndMergeMethod, setApproveAndMergeMethod] =
+    useState<MergeMethod | null>(null)
 
   const canMerge = useMemo(() => mergeableNow(details), [details])
   const blockReason = useMemo(() => mergeBlockedReason(details), [details])
@@ -46,6 +50,10 @@ export function PRDetailsView({ prID, onBack }: PRDetailsViewProps) {
 
   const handleRequestMerge = useCallback((method: MergeMethod) => {
     setMergeMethod(method)
+  }, [])
+
+  const handleRequestApproveAndMerge = useCallback((method: MergeMethod) => {
+    setApproveAndMergeMethod(method)
   }, [])
 
   const handleConfirmMerge = useCallback(async () => {
@@ -63,6 +71,47 @@ export function PRDetailsView({ prID, onBack }: PRDetailsViewProps) {
     }
   }, [mergeMethod, details, prID, mergeMutation, onBack, reload])
 
+  const handleConfirmApproveAndMerge = useCallback(async () => {
+    if (!approveAndMergeMethod || !details) return
+    try {
+      const result = await approveAndMergeMutation.mutateAsync({
+        prID,
+        method: approveAndMergeMethod,
+      })
+      if (result.failedStep === "approve") {
+        toast.error(
+          `falha ao aprovar PR: ${result.errorMessage ?? "erro desconhecido"}`
+        )
+        void reload()
+        return
+      }
+      if (result.failedStep === "merge") {
+        toast.error(
+          `PR aprovado, mas merge falhou: ${result.errorMessage ?? "erro desconhecido"}`
+        )
+        void reload()
+        return
+      }
+      toast.success(
+        `PR aprovado e ${approveAndMergeMethod === "squash" ? "squash-merged" : "merged"} com sucesso`
+      )
+      setApproveAndMergeMethod(null)
+      onBack()
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "erro ao aprovar e mergear"
+      )
+      void reload()
+    }
+  }, [
+    approveAndMergeMethod,
+    details,
+    prID,
+    approveAndMergeMutation,
+    onBack,
+    reload,
+  ])
+
   if (loading && !details) {
     return <PRDetailsLoadingSkeleton onBack={onBack} />
   }
@@ -78,7 +127,7 @@ export function PRDetailsView({ prID, onBack }: PRDetailsViewProps) {
   }
 
   return (
-    <div className="flex h-screen flex-col gap-3 overflow-y-auto bg-background p-3 text-foreground">
+    <div className="flex h-screen animate-in flex-col gap-3 overflow-y-auto bg-background p-3 text-foreground duration-base ease-standard fade-in-0">
       <PRDetailsHeader
         details={details}
         prState={prState}
@@ -88,6 +137,7 @@ export function PRDetailsView({ prID, onBack }: PRDetailsViewProps) {
         mergeBlockReason={blockReason}
         merging={merging}
         onRequestMerge={handleRequestMerge}
+        onRequestApproveAndMerge={handleRequestApproveAndMerge}
       />
 
       <PRDetailsMeta details={details} />
@@ -141,6 +191,19 @@ export function PRDetailsView({ prID, onBack }: PRDetailsViewProps) {
         method={mergeMethod}
         onConfirm={() => void handleConfirmMerge()}
         busy={merging}
+      />
+
+      <PRMergeDialog
+        open={approveAndMergeMethod !== null}
+        onOpenChange={(open) => {
+          if (!open && !merging) setApproveAndMergeMethod(null)
+        }}
+        prNumber={details.number}
+        prTitle={details.title}
+        method={approveAndMergeMethod}
+        onConfirm={() => void handleConfirmApproveAndMerge()}
+        busy={merging}
+        withApprove
       />
     </div>
   )
