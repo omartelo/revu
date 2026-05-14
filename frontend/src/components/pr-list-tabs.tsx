@@ -101,7 +101,13 @@ export function PRListTabs({
 
 function SkeletonList() {
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Carregando PRs"
+      className="flex flex-col gap-2"
+    >
       {Array.from({ length: INITIAL_LOAD_SKELETON_COUNT }).map((_, i) => (
         <PRCardSkeleton key={i} />
       ))}

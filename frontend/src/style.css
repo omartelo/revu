@@ -211,3 +211,18 @@
     @apply font-sans;
   }
 }
+
+/* REV-60 — respeita preferência do SO por movimento reduzido. Cobre spin do
+   refresh, fades do tw-animate-css, transições de hover em PR card,
+   transitions de Radix dialogs/tabs. !important pra vencer animações
+   tailwind/utility classes. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
