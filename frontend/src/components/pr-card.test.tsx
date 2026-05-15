@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { axe } from "vitest-axe"
 
 import type { PRRecord } from "@/lib/types"
 
@@ -157,5 +158,27 @@ describe("PRCard", () => {
   it("NÃO renderiza dot novo quando isNew=false (default)", () => {
     render(<PRCard pr={makePR()} onOpen={vi.fn()} />)
     expect(screen.queryByLabelText("novo")).toBeNull()
+  })
+
+  it("axe: estado base sem violações", async () => {
+    vi.useRealTimers()
+    const { container } = render(<PRCard pr={makePR()} onOpen={vi.fn()} />)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("axe: com dot novo sem violações", async () => {
+    vi.useRealTimers()
+    const { container } = render(
+      <PRCard pr={makePR()} onOpen={vi.fn()} isNew />
+    )
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("axe: avatar fallback (UserRound) sem violações", async () => {
+    vi.useRealTimers()
+    const { container } = render(
+      <PRCard pr={makePR({ avatarUrl: "" })} onOpen={vi.fn()} />
+    )
+    expect(await axe(container)).toHaveNoViolations()
   })
 })

@@ -43,12 +43,19 @@ export function MainHeader({
             onOpenAccounts={() => onOpenSettings("accounts")}
           />
         </div>
-        <div className="truncate text-xs text-muted-foreground">
+        <div
+          role="status"
+          aria-live="polite"
+          className="truncate text-xs text-muted-foreground"
+        >
           {pendingCount} pendente{pendingCount === 1 ? "" : "s"} ·{" "}
           {historyCount} no histórico · {since}
         </div>
         {lastPollErr && (
-          <div className="mt-0.5 flex items-center gap-1 text-xs text-destructive">
+          <div
+            role="alert"
+            className="mt-0.5 flex items-center gap-1 text-xs text-destructive"
+          >
             <AlertCircle className="size-3" aria-hidden="true" />
             último poll falhou: {lastPollErr}
           </div>
@@ -61,16 +68,18 @@ export function MainHeader({
           onClick={() => onOpenSettings()}
           aria-label="Configurações"
         >
-          <Settings />
+          <Settings aria-hidden="true" />
         </Button>
         <Button
           size="sm"
           variant="outline"
           onClick={onRefresh}
           disabled={loading}
+          aria-busy={loading}
         >
           <RefreshCw
             data-icon="inline-start"
+            aria-hidden="true"
             className={cn(loading && "animate-spin")}
           />
           Atualizar

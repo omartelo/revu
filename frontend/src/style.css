@@ -220,10 +220,11 @@
   }
 }
 
-/* REV-59 — kill-switch global de animações para usuários com prefers-reduced-motion.
-   Cobre Tailwind utilities, tw-animate-css, Sonner e Radix data-state animations
-   sem precisar variant motion-reduce: por componente. Mantém transitions ativas
-   (não zera) — comprime para imperceptível, evitando glitches em transitionend. */
+/* REV-59/REV-60 — kill-switch global de animações para usuários com
+   prefers-reduced-motion. Cobre Tailwind utilities, tw-animate-css, Sonner,
+   Radix data-state animations e spin do RefreshCw sem precisar variant
+   motion-reduce: por componente. Mantém transitions ativas (não zera) —
+   comprime para imperceptível, evitando glitches em transitionend. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

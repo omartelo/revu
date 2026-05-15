@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
+import { axe } from "vitest-axe"
 
 import { EmptyState } from "./empty-state"
 
@@ -61,5 +62,27 @@ describe("EmptyState", () => {
     )
     await user.click(screen.getByRole("button", { name: "Tentar de novo" }))
     expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it.each([["pending"] as const, ["history"] as const])(
+    "axe: variant %s sem violações",
+    async (variant) => {
+      const { container } = render(<EmptyState variant={variant} />)
+      expect(await axe(container)).toHaveNoViolations()
+    }
+  )
+
+  it("axe: variant no-accounts sem violações", async () => {
+    const { container } = render(
+      <EmptyState variant="no-accounts" onAddAccount={vi.fn()} />
+    )
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("axe: variant error-sync sem violações", async () => {
+    const { container } = render(
+      <EmptyState variant="error-sync" message="falhou" onRetry={vi.fn()} />
+    )
+    expect(await axe(container)).toHaveNoViolations()
   })
 })
