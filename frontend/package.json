@@ -44,7 +44,7 @@
     "react": "^18.2.0",
     "react-diff-viewer-continued": "^4.2.2",
     "react-dom": "^18.2.0",
-    "react-hook-form": "^7.73.1",
+    "react-hook-form": "^7.75.0",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.1",
     "remark-gfm": "^4.0.1",
